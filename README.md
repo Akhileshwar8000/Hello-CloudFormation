@@ -44,7 +44,7 @@ The template provisions an EC2 instance, installs and configures the `nginx` web
     * **Parameters:**
         * `DisplayName`: Enter the name you want to appear on the webpage (e.g., "Akhileshwar Chauhan").
         * `KeyPairName`: Select your existing EC2 Key Pair from the dropdown.
-        * `SshCidrBlock`: Leave the default (`131.247.0.0/16`) or change it to your current IP address (e.g., `x.x.x.x/32`).
+        * `SshCidrBlock`: Leave the default (`0.0.0.0/0`) or change it to your current IP address (e.g., `x.x.x.x/32`).
     * Click **"Next"**.
 4.  **Configure Stack Options:**
     * You can leave all options on this page as their defaults.
