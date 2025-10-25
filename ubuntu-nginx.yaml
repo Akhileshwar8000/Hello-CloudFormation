@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Assignment CIS4083 Creating to an Ubuntu 24 Nginx Server
+
+Parameters:
+    SSHKeyName:
+        Type: AWS::EC2::KeyPair::KeyName
+        Description: Name of an existing EC2 keypair to enable SSH access.
+        AllowedPattern: ".+"
+
+    SSHCIDR:
+        Type: String
+        Description: The CIDR block for restricting SSH access.
+        Default: 131.247.0.0/16
+        MinLength: 10
+        AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+        ConstraintDescription: must be a valid IP CIDR range in the form x.x.x.x/x
+
+Resources:
+    EC2Instance:
+        Type: AWS::EC2::Instance
+        Properties:
+            ImageId: ami-0360c520857e3138f
+            InstanceType: t3.micro
+            KeyName: !Ref SSHKeyName
+            SecurityGroupIds:
+                - !Ref WebSecurityGroup
+                - !Ref SSHSecurityGroup
+            Tags:
+                - Key: Name
+                  Value: Ubuntu 24 Nginx Server
+            UserData:
+                "Fn::Base64": !Sub |
+                    #!/usr/bin/bash
+                    # 
+                    # basic ubuntu 24
+                    #
+                    set -e 
+                    set -x
+                    echo "BEGIN USER DATA"
+                    export DEBIAN_FRONTEND=noninteractive
+                    timedatectl set-timezone America/New_York
+                    apt update
+                    apt install -y nginx
+                    TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+                    PUBLIC_DNS=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/public-hostname)
+                    REGION=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/region)
+                    cd /var/www/html
+                    echo "<html><head><title>Akhileshwar Chauhan</title></head><body><h1>Akhileshwar Chauhan</h1><p>Public DNS: $PUBLIC_DNS</p><p>Region: $REGION</p><p></p></body></html>" > index.html
+                    systemctl start nginx
+                    echo "END USER DATA"
+
+    WebSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupDescription: Allow HTTP connection from anywhere
+            SecurityGroupIngress:
+                - CidrIp: 0.0.0.0/0
+                  FromPort: 80
+                  IpProtocol: TCP
+                  ToPort: 80
+
+    SSHSecurityGroup:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupDescription: Allow SSH connection USF CIDR
+            SecurityGroupIngress:
+                - CidrIp: !Ref SSHCIDR
+                  FromPort: 22
+                  IpProtocol: TCP
+                  ToPort: 22
+
+Outputs:
+    WebServerURL:
+        Description: The URL to the web server.
+        Value: !Sub 'http://${EC2Instance.PublicIp}'
